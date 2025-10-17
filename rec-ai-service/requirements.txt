@@ -1,0 +1,27 @@
+# Web Framework
+fastapi>=0.118.0
+uvicorn[standard]>=0.37.0
+
+# Data validation and serialization
+pydantic>=2.11.0
+
+# Machine Learning & Data Science
+numpy>=2.3.0
+scikit-learn>=1.7.0
+scipy>=1.16.0
+
+# LLM Integration
+ollama>=0.6.0
+
+# Environment & Configuration
+python-dotenv>=1.1.0
+
+# Testing
+pytest>=8.4.0
+pytest-asyncio>=1.2.0
+
+# HTTP Client (already installed)
+httpx>=0.28.0
+
+# Utilities
+typing-extensions>=4.15.0
