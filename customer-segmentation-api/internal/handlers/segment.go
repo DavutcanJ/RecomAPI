@@ -8,9 +8,13 @@ import (
     "net/http"
     "os"
     "time"
-
+    "context"
+    "crypto/md5"
+    "github.com/DavutcanJ/customer-segmentation-api/internal/services"
+   
     "github.com/DavutcanJ/customer-segmentation-api/internal/models"
     "github.com/gin-gonic/gin"
+   
 )
 
 type SegmentHandler struct{}
@@ -38,7 +42,24 @@ func (h *SegmentHandler) SegmentCustomer(c *gin.Context) {
         return
     }
 
-    // Get Python service URL from environment
+    // Cache key oluştur (request'in hash'i)
+    cacheKey := generateCacheKey(req)
+    
+    // Önce cache'e bak
+    ctx := context.Background()
+    if cached, err := services.GetSegmentFromCache(ctx, cacheKey); err == nil {
+        fmt.Printf("✅ Cache hit for key: %s\n", cacheKey)
+        
+        var cachedResult models.SegmentResponse
+        if json.Unmarshal([]byte(cached), &cachedResult) == nil {
+            c.JSON(http.StatusOK, cachedResult)
+            return
+        }
+    }
+
+    fmt.Printf("❌ Cache miss for key: %s\n", cacheKey)
+
+    // Cache'de yoksa Python servisine git
     pythonServiceURL := os.Getenv("PYTHON_SERVICE_URL")
     if pythonServiceURL == "" {
         pythonServiceURL = "http://localhost:5005"
@@ -108,7 +129,16 @@ func (h *SegmentHandler) SegmentCustomer(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "Failed to parse response: " + err.Error()})
         return
     }
-
+    if resultJSON, err := json.Marshal(result); err == nil {
+        services.SetSegmentToCache(ctx, cacheKey, string(resultJSON), 24*time.Hour)
+        fmt.Printf("💾 Cached result for key: %s\n", cacheKey)
+    }
     fmt.Printf("✅ Successful response: %+v\n", result)
     c.JSON(http.StatusOK, result)
+}
+
+func generateCacheKey(req models.SegmentRequest) string {
+    data, _ := json.Marshal(req)
+    hash := md5.Sum(data)
+    return fmt.Sprintf("segment:%x", hash)
 }

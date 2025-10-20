@@ -34,6 +34,11 @@ func main() {
     // Connect to MongoDB
     config.ConnectDatabase()
 
+    // Initialize Redis (optional, app works without it)
+    if err := services.InitRedis(); err != nil {
+        log.Printf("Warning: Redis connection failed: %v", err)
+    }
+
     // Initialize database indexes
     userService := services.NewUserService()
     if err := userService.InitializeIndexes(); err != nil {

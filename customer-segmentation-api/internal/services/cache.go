@@ -10,13 +10,9 @@ import (
     "github.com/redis/go-redis/v9"
 )
 
-type CacheConfig struct {
-    Addr     string
-    Password string
-    DB       int
-}
+var RedisClient *redis.Client
 
-func getRedisConfig() *CacheConfig {
+func InitRedis() error {
     addr := os.Getenv("REDIS_URI")
     if addr == "" {
         addr = "localhost:6379"
@@ -31,22 +27,10 @@ func getRedisConfig() *CacheConfig {
         }
     }
     
-    return &CacheConfig{
+    RedisClient = redis.NewClient(&redis.Options{
         Addr:     addr,
         Password: password,
         DB:       db,
-    }
-}
-
-var RedisClient *redis.Client
-
-func InitRedis() error {
-    config := getRedisConfig()
-    
-    RedisClient = redis.NewClient(&redis.Options{
-        Addr:     config.Addr,
-        Password: config.Password,
-        DB:       config.DB,
     })
     
     // Test connection
@@ -63,9 +47,15 @@ func InitRedis() error {
 }
 
 func GetSegmentFromCache(ctx context.Context, key string) (string, error) {
+    if RedisClient == nil {
+        return "", redis.Nil // Cache not available
+    }
     return RedisClient.Get(ctx, key).Result()
 }
 
 func SetSegmentToCache(ctx context.Context, key, value string, ttl time.Duration) error {
+    if RedisClient == nil {
+        return nil // Cache not available, no error
+    }
     return RedisClient.Set(ctx, key, value, ttl).Err()
 }
